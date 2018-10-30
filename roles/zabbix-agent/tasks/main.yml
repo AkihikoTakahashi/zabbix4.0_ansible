@@ -1,0 +1,44 @@
+---
+
+- name: be sure 10050/tcp is allowed
+  firewalld:
+    port: 10050/tcp
+    permanent: true
+    immediate: yes
+    state: enabled
+  tags:
+    - zabbix-agent
+    - firewalld
+
+- name: be sure zabbix repository is installed
+  yum:
+    name: "https://repo.zabbix.com/zabbix/4.0/rhel/{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/zabbix-release-4.0-1.el7.noarch.rpm"
+    state: present
+  tags:
+    - zabbix-agent
+
+- name: be sure zabbix-agent is installed
+  yum:
+    name: zabbix-agent
+    state: installed
+
+- name: be sure zabbix_agentd is configured
+  template:
+    src: zabbix_agentd.conf.j2
+    dest: /etc/zabbix/zabbix_agentd.conf
+    owner: root
+    group: root
+    mode: 0644
+    backup: yes
+  notify:
+    - restart zabbix-agent
+  tags:
+    - zabbix-agent
+
+- name: be sure zabbix-agent is running and enabled
+  service:
+    name: zabbix-agent
+    state: started
+    enabled: yes
+  tags:
+    - zabbix-agent

@@ -1,0 +1,154 @@
+---
+
+- name: be sure http port is allowed
+  firewalld:
+    service: http
+    permanent: true
+    immediate: yes
+    state: enabled
+  tags:
+    - zabbix
+    - firewalld
+
+- name: be sure 10051/tcp is allowed
+  firewalld:
+    port: 10051/tcp
+    permanent: true
+    immediate: yes
+    state: enabled
+  tags:
+    - zabbix
+    - firewalld
+
+- name: be sure zabbix repository is installed
+  yum:
+    name: "https://repo.zabbix.com/zabbix/4.0/rhel/{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/zabbix-release-4.0-1.el7.noarch.rpm"
+    state: present
+  tags:
+    - zabbix
+
+- name: be sure zabbix packages are installed
+  yum:
+    name: 
+      - zabbix-server-mysql
+      - zabbix-web-mysql
+      - zabbix-web-japanese
+      - zabbix-agent
+      - zabbix-get
+    state: installed
+  tags:
+    - zabbix
+
+- name: be sure mariadb-server installed
+  yum:
+    name:
+      - mariadb-server
+      - MySQL-python
+    state: installed
+  tags:
+    - zabbix
+    - mariadb
+
+- name: be sure mariadb is running and enabled
+  service:
+    name: mariadb
+    state: started
+    enabled: yes
+  tags:
+    - zabbix
+    - mariadb
+
+- name: be sure zabbix database is created
+  mysql_db:
+    name: zabbix
+    encoding: utf8
+    state: present
+  tags:
+    - zabbix
+    - mariadb
+  
+
+- name: be sure zabbix user are created
+  mysql_user:
+    name: zabbix
+    password: "{{ zabbix_mariadb_password }}"
+    priv: 'zabbix.*:ALL,GRANT'
+  tags:
+    - zabbix
+    - mariadb
+
+- name: check zabbix table is exists
+  shell: mysql -uroot -ss zabbix -e "select count(*) from users"
+  ignore_errors: yes
+  register: count_users
+  changed_when: False
+  tags:
+    - zabbix
+    - mariadb
+
+#- debug:
+#    var: count_users
+
+- name: be sure zabbix DB is inserted
+  shell: zcat /usr/share/doc/zabbix-server-mysql*/create.sql.gz | mysql -uroot zabbix 
+  when: count_users.rc != 0
+  tags:
+    - zabbix
+    - mariadb
+
+- name: be sure httpd is configured
+  lineinfile:
+    dest: /etc/httpd/conf.d/zabbix.conf
+    state: present
+    backup: yes
+    backrefs: yes
+    regexp: "php_value date.timezone"
+    line: "        php_value date.timezone {{ php_timezone }}"
+  notify:
+    - restart httpd
+  tags:
+    - zabbix
+    - http
+
+- name: be sure httpd is running and enabled
+  service:
+    name: httpd
+    state: started
+    enabled: yes
+  tags:
+    - zabbix
+    - http
+
+- name: be sure zabbix-server is configured
+  lineinfile:
+    dest: /etc/zabbix/zabbix_server.conf
+    state: present
+    backup: yes
+    backrefs: yes
+    regexp: "^# DBPassword=$"
+    line: "DBPassword={{ zabbix_mariadb_password }}"
+  notify:
+    - restart zabbix-server
+  tags:
+    - zabbix
+    - zabbix-server
+
+- name: be sure zabbix-server is running and enabled
+  service:
+    name: zabbix-server
+    state: started
+    enabled: yes
+  tags:
+    - zabbix
+    - zabbix-server
+
+- name: be sure zabbix.conf.php is configured
+  template:
+    src: zabbix.conf.php.j2
+    dest: /etc/zabbix/web/zabbix.conf.php
+    owner: apache
+    group: apache
+    mode: 0644
+  tags:
+    - zabbix
+    - zabbix-server

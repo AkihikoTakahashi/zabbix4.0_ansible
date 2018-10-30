@@ -1,0 +1,5 @@
+---
+
+zabbix_server_ip: 192.168.56.14
+zabbix_server_active_ip: 192.168.56.14
+allow_root: 1

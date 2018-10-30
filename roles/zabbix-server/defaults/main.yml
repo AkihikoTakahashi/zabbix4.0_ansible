@@ -1,0 +1,4 @@
+---
+
+zabbix_mariadb_password: "dbpass123"
+php_timezone: "Asia/Tokyo"
