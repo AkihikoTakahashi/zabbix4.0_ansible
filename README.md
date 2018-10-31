@@ -5,6 +5,10 @@ ansible2.7を用いてZabbix-server 4.0を構築する。
 * CentOS7
 * Zabbix4.0
 
+## 実行条件
+* Zabbixサーバがインターネットと接続していること
+* ZabbixサーバのSelinuxが無効となっていること
+
 ## 設定内容
 * zabbix-server
   + zabbixリポジトリ登録
@@ -27,3 +31,12 @@ ansible2.7を用いてZabbix-server 4.0を構築する。
   + zabbix_server_active_ip ... Zabbixサーバ（アクティブ）のIPアドレス
   + allow_root ... Zabbixからサーバへのアクセス時にrootユーザを許可するなら 1 しないなら 0   
   
+# 実行方法
+```
+git clone https://github.com/AkihikoTakahashi/zabbix4.0_ansible.git
+vi zabbix4.0_ansible/production
+IPをZabbixサーバのIPに変更してください
+
+ansible-playbook -i zabbix4.0_ansible/production zabbix4.0_ansible/site.yml --ask-pass
+```
+完了すると http://ZabbixIP/zabbix でアクセスできます。
